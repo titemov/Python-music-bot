@@ -5,3 +5,4 @@ __STILL WIP__
 ## Requirements
 - [ffmpeg](https://www.ffmpeg.org/) binary to be in the same folder.
 - `pip install requirements.txt`
+- All Privileged Gateway Intents must be turned __ON__
