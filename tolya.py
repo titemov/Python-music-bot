@@ -264,7 +264,7 @@ async def add(ctx, url):
                     await ctx.message.reply("Ошибка! Невозможно получить информацию о треке.")
                     logger.error(f"Cannot extract info: {e} (Probably unavaliable)")
                     return
-            print(info)
+            #print(info)
             ###checks
             try:
                 if info['availability']==None:
