@@ -29,7 +29,7 @@ class MyLogger:
         logger1.info(f"YOUTUBE-DLP: {msg}")
 
     def warning(self, msg):
-        if not 'Some formats' or 'Falling back' in msg:
+        if not ('Some formats' or 'Falling back') in msg:
             logger1.warning(f"YOUTUBE-DLP: {msg}")
 
     def error(self, msg):
