@@ -21,6 +21,6 @@ __STILL WIP__
 - **`-queue`** – show tracks queue
 - **`-clear`** – clear queue
   - _If bot exits the voice channel correctly, the queue is cleared automatically_
-- **`-jump [№ in queue]`** – play track by it № in queue
+- **`-jump [№ in queue]`** – play track by its № in queue
 - **`-leave`** – kick bot out of current voice channel (unprotected)
   - _If bot exits the voice channel correctly, the queue is cleared automatically_
