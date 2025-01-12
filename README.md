@@ -4,7 +4,7 @@ Multiserver python-based discord bot for YouTube videos. This bot have dynamic m
 __STILL WIP__
 ## Requirements
 - [ffmpeg](https://www.ffmpeg.org/) binary to be in the same folder.
-- `pip install requirements.txt`
+- `pip install -r requirements.txt`
 - All Privileged Gateway Intents must be turned __ON__
 
 ## Commands
