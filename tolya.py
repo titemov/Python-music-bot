@@ -267,13 +267,13 @@ async def add(ctx, url):
             #print(info)
             ###checks
             try:
-                if info['availability']==None:
-                    await ctx.message.reply("Ошибка! Невозможно воспроизвести видео с возрастными ограничениями.")
-                    logger.error("Age restricted video called")
-                    if no_url:
-                        await msg_delete(msg)
-                    #raise Exception("Age restricted video called")
-                    return
+                #if info['availability']==None:
+                #    await ctx.message.reply("Ошибка! Невозможно воспроизвести видео с возрастными ограничениями.")
+                #    logger.error("Age restricted video called")
+                #    if no_url:
+                #        await msg_delete(msg)
+                #    #raise Exception("Age restricted video called")
+                #    return
                 if info['live_status']=='is_live':
                     await ctx.message.reply("Ошибка! Невозможно воспроизвести прямую трансляцию.")
                     logger.error("Live stream called")
