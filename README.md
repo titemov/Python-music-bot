@@ -30,4 +30,4 @@ Logging: ENG
 - **`-leave`** – kick bot out of current voice channel (unprotected)
   - _If bot exits the voice channel correctly, the queue is cleared automatically_
 ## Known issues
-- If you have any trouble with yt-dlp, try update it to `nightly` version. Or check if your country have access to YouTube
+- If you have any trouble with yt-dlp, try update it to `nightly` version.
