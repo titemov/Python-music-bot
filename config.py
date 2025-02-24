@@ -5,10 +5,9 @@ FFMPEG_PATH = "ffmpeg.exe"
 YDL_OPTIONS = {
     'format': 'bestaudio/best',
     'extractaudio': True,
-    'audioformat': 'mp3',
+    'audioformat': 'opus',
     'simulate': True,
     'preferredquality': 0,
-    'preferredcodec': 'mp3',
     'key': 'FFmpegExtractAudio',
     'quiet': True,
     'logger': yt_logger.MyLogger(),
