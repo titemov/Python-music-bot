@@ -43,7 +43,7 @@ intents = discord.Intents.all()
 intents.message_content= True
 intents.voice_states = True
 
-bot = commands.Bot(command_prefix='-',intents=intents)
+bot = commands.Bot(command_prefix='!',intents=intents)
 bot.remove_command('help')
 
 
@@ -261,15 +261,15 @@ async def add(ctx, url):
                 msg = await ctx.channel.send("Ищу...\n"
                                         "Для лучшего поиска используйте: **`-search`**")
                 try:
-                    searchResultUrl = (list(ydl.extract_info(f"ytsearch1:{url}", download=False,process=False)
-                                            ['entries'])[0])['url']
-                    info = ydl.extract_info(searchResultUrl, download=False, process=False)
-                    #print(info)
+                    info = (list(ydl.extract_info(f"ytsearch1:{url}", download=False,process=False)
+                                            ['entries'])[0])
+                    ydl.extract_info(info['url'], download=False, process=False)
+                    print(info)
                 except Exception as e:
                     await msg_delete(msg)
                     await ctx.message.reply("Ошибка! Скорее всего видео имеет возрастные ограничения.")
                     logger.error(f"Cannot extract info: {e} (Probably unavailable or age restricted)")
-                    return
+                    return 1
             #print(info)
             ###checks
             try:
@@ -388,7 +388,8 @@ async def play(ctx, *url):
             return
         if await join(ctx)==1:
             return
-        await add(ctx, ' '.join(url))
+        if (await add(ctx, ' '.join(url))==1):
+            raise Exception("Cannot extract info")
 
         await audio_player(ctx.voice_client,ctx)
 
