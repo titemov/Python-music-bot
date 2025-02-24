@@ -43,7 +43,7 @@ intents = discord.Intents.all()
 intents.message_content= True
 intents.voice_states = True
 
-bot = commands.Bot(command_prefix='-',intents=intents)
+bot = commands.Bot(command_prefix='!',intents=intents)
 bot.remove_command('help')
 
 
@@ -173,13 +173,14 @@ async def add(ctx, url):
 
             try:
                 msg = await ctx.channel.send("Добавляю...")
-                playlist_info = ydl.extract_info(url,download=False,process=False) #process=False to get ONLY playlist info (length)
-
+                playlist_info = ydl.extract_info(url,download=False,process=False)
+                #process=False to get ONLY playlist info (length)
                 if 'entries' in playlist_info:
                     entries=list(playlist_info['entries'])
                 elif 'ie_key' in playlist_info:
                     url = playlist_info['url']
-                    playlist_info = ydl.extract_info(url,download=False,process=False)  # process=False to get ONLY playlist info (length)
+                    playlist_info = ydl.extract_info(url,download=False,process=False)
+                    # process=False to get ONLY playlist info (length)
                     entries = list(playlist_info['entries'])
                 else:
                     logger.debug(f'Incorrect playlist given by {author} in \"{ctx.guild.name}\"')
@@ -204,8 +205,9 @@ async def add(ctx, url):
 
                 for i in range(playlist_len):
                     try:
+                        #ydl.extract_info(entries[i]['url'], download=False, process=False)
                         name = entries[i]['title']
-                        #print(f"playlist: {i} {entries[i]}")
+                        print(f"playlist: {i} {entries[i]}")
                         src_url=""
                         vid_url=entries[i]['url']
                         pause_time=0
@@ -222,10 +224,10 @@ async def add(ctx, url):
                              raise Exception
                         else:
                             playtime += length
-                            songs_queue.queue_add(
-                                [name, length, start_time, src_url, vid_url, thumbnail_url, author, pause_time,no_play_time],
-                                ctx.guild.id)
+                            songs_queue.queue_add([name, length, start_time, src_url, vid_url, thumbnail_url, author,
+                                                   pause_time,no_play_time],ctx.guild.id)
                     except:
+                        print(i)
                         skipped += f"{name}\n"
                         logger.debug(f'Track skipped – {name}.')
 
@@ -247,7 +249,8 @@ async def add(ctx, url):
                 logger.error(f'Playlist error: {e}')
                 logger.exception(e)
                 await ctx.message.reply("Ошибка воспроизведения плейлиста. Проверьте ссылку.\n"
-                                        "Если Вы хотели воспроизвести __один__ трек, то уберите из ссылки всё после \"&list\" включая \"&list\"")
+                                        "Если Вы хотели воспроизвести __один__ трек, то уберите из ссылки всё после"
+                                        "\"&list\" включая \"&list\"")
 
     else:
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
@@ -258,22 +261,18 @@ async def add(ctx, url):
                 msg = await ctx.channel.send("Ищу...\n"
                                         "Для лучшего поиска используйте: **`-search`**")
                 try:
-                    info = list(ydl.extract_info(f"ytsearch1:{url}", download=False,process=False)['entries'])[0]
+                    searchResultUrl = (list(ydl.extract_info(f"ytsearch1:{url}", download=False,process=False)
+                                            ['entries'])[0])['url']
+                    info = ydl.extract_info(searchResultUrl, download=False, process=False)
+                    #print(info)
                 except Exception as e:
                     await msg_delete(msg)
-                    await ctx.message.reply("Ошибка! Невозможно получить информацию о треке.")
-                    logger.error(f"Cannot extract info: {e} (Probably unavaliable)")
+                    await ctx.message.reply("Ошибка! Скорее всего видео имеет возрастные ограничения.")
+                    logger.error(f"Cannot extract info: {e} (Probably unavailable or age restricted)")
                     return
             #print(info)
             ###checks
             try:
-                #if info['availability']==None:
-                #    await ctx.message.reply("Ошибка! Невозможно воспроизвести видео с возрастными ограничениями.")
-                #    logger.error("Age restricted video called")
-                #    if no_url:
-                #        await msg_delete(msg)
-                #    #raise Exception("Age restricted video called")
-                #    return
                 if info['live_status']=='is_live':
                     await ctx.message.reply("Ошибка! Невозможно воспроизвести прямую трансляцию.")
                     logger.error("Live stream called")
@@ -302,11 +301,14 @@ async def add(ctx, url):
             length = datetime.timedelta(seconds=info['duration'])
 
             if length>datetime.timedelta(seconds=60*60*24-1): #more than 24h check
-                embed = discord.Embed(description=f"Ошибка! Заказанный трек - [{name}]({url}) длится более 24 часов!", colour=discord.Colour.red())
+                embed = discord.Embed(description=f"Ошибка! Заказанный трек - [{name}]({url}) длится более 24 часов!",
+                                      colour=discord.Colour.red())
                 logger.debug(f"Longer than 24h by {author} in \"{ctx.guild.name}\"")
             else:
-                songs_queue.queue_add([name, length, start_time, src_url, url, thumbnail_url, author, pause_time, no_play_time], ctx.guild.id)
-                embed = discord.Embed(description=f'**Трек**\n[{name}]({url}) ({length})\nдобавлен в очередь', colour=discord.Colour.green())
+                songs_queue.queue_add([name, length, start_time, src_url, url, thumbnail_url, author, pause_time,
+                                       no_play_time], ctx.guild.id)
+                embed = discord.Embed(description=f'**Трек**\n[{name}]({url}) ({length})\nдобавлен в очередь',
+                                      colour=discord.Colour.green())
                 embed.set_thumbnail(url=thumbnail_url)
                 logger.info(f"{name} ({url}) requested by {author} in \"{ctx.guild.name}\"")
             if no_url:
@@ -329,6 +331,7 @@ async def auto_skip(voice_client,ctx,avaliable=True):
 
 async def audio_player(voice_client,ctx): #track player
     serverid=ctx.guild.id
+    #channelid=ctx.channel.id
     try:
         if not voice_client.is_playing():
             if songs_queue.get_stream_link(serverid) == "":
@@ -338,16 +341,16 @@ async def audio_player(voice_client,ctx): #track player
                         songs_queue.set_stream_link(serverid, info['url'])
                     except:
                         logger.info(f"Skipping unavaliable video in \"{ctx.guild.name}\".")
-                        # async with asyncio.timeout(1): #(((not working)))
-                        #     await ctx.channel.send(f"Unavaliable track ([{songs_queue.get_track_name(serverid)}]"
-                        #                            f"({songs_queue.get_yt_link(serverid)})) skipped.")
+                        songs_queue.tracks[serverid][1][songs_queue.get_index(serverid)][0]="(UNAVAILABLE) "+\
+                                                    songs_queue.tracks[serverid][1][songs_queue.get_index(serverid)][0]
             if songs_queue.get_stream_link(serverid):
-                voice_client.play(discord.FFmpegPCMAudio(source=songs_queue.get_stream_link(serverid),
-                                                **FFMPEG_OPTIONS), after=lambda e: asyncio.run(auto_skip(voice_client,ctx)))
+                voice_client.play(discord.FFmpegOpusAudio(source=songs_queue.get_stream_link(serverid),
+                                            **FFMPEG_OPTIONS), after=lambda e: asyncio.run(auto_skip(voice_client,ctx)))
                 #disconnect after time module
                 try:
                     songs_queue.tracks[serverid][3] = 0
-                    if (songs_queue.tracks[serverid][0]==0 and songs_queue.tracks[serverid][2]==False and songs_queue.tracks[serverid][4]==False):
+                    if (songs_queue.tracks[serverid][0]==0 and songs_queue.tracks[serverid][2]==False and
+                            songs_queue.tracks[serverid][4]==False):
                         while True:
                             if ctx.voice_client.is_playing():
                                 songs_queue.tracks[serverid][3] = 0
@@ -376,7 +379,8 @@ async def audio_player(voice_client,ctx): #track player
         logger.exception(e)
 
 
-@bot.command(description="plays music by url or keyword search",aliases=['p','PLAY','P','здфн','з','ЗДФН','З','Play','Здфн'])
+@bot.command(description="plays music by url or keyword search",
+             aliases=['p','PLAY','P','здфн','з','ЗДФН','З','Play','Здфн'])
 async def play(ctx, *url):
     try:
         if not url:
@@ -394,7 +398,8 @@ async def play(ctx, *url):
         return
 
 
-@bot.command(description="search menu for tracks",aliases=['s','S','SEARCH','Ы','ы','ыуфкср','ЫУФКСР','Search','Ыуфкср'])
+@bot.command(description="search menu for tracks",
+             aliases=['s','S','SEARCH','Ы','ы','ыуфкср','ЫУФКСР','Search','Ыуфкср'])
 async def search(ctx, *user_request):
     if not user_request:
         await ctx.message.reply('Нет запроса!')
@@ -405,8 +410,9 @@ async def search(ctx, *user_request):
 
     searchResult = YoutubeSearch(f"{user_request}", max_results=5).to_dict()
 
-    await ctx.message.reply(f"```{backslash_n.join(str(i) +') ' + searchResult[j]['title'] for i, j in enumerate(range(len(searchResult)), 1))}\n"
-                            f"\nЧтобы выбрать нужный трек напишите цифру 1-5 в течение 30 секунд. Напишите \"cancel\" чтобы отменить```")
+    await ctx.message.reply(f"```"
+    f"{backslash_n.join(str(i) +') ' + searchResult[j]['title'] for i, j in enumerate(range(len(searchResult)), 1))}\n"
+    f"\nЧтобы выбрать нужный трек напишите цифру 1-5 в течение 30 секунд. Напишите \"cancel\" чтобы отменить```")
     try:
         msg = await bot.wait_for("message",timeout=30, check=lambda m: m.author.id == ctx.author.id)
 
@@ -465,7 +471,8 @@ async def unloop(ctx):
         await ctx.message.reply(f'Бот выключен!')
 
 
-@bot.command(description="pauses current track",aliases=['PAUSE','Pause','stop','STOP','Stop','зфгыу','ЗФГЫУ','Зфгыу','ыещз','ЫЕЩЗ','Ыещз'])
+@bot.command(description="pauses current track",
+             aliases=['PAUSE','Pause','stop','STOP','Stop','зфгыу','ЗФГЫУ','Зфгыу','ыещз','ЫЕЩЗ','Ыещз'])
 async def pause(ctx):
     if ctx.voice_client:
         if ctx.voice_client.is_playing():
@@ -482,7 +489,7 @@ async def pause(ctx):
 
 
 @bot.command(description="resumes paused track",
-             aliases=['RESUME','Resume','unpause','Unpause','UNPAUSE','куыгьу','КУЫГЬУ','Куыгьу','гтзфгыу','ГТЗФЫУ','Гтзфгыу'])
+    aliases=['RESUME','Resume','unpause','Unpause','UNPAUSE','куыгьу','КУЫГЬУ','Куыгьу','гтзфгыу','ГТЗФЫУ','Гтзфгыу'])
 async def resume(ctx):
     if ctx.voice_client:
         voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
@@ -519,7 +526,7 @@ async def skip(ctx,fromjump=False):
 
 
 @bot.command(description="disconnets bot from voice channel",
-        aliases=['DISCONNECT', 'DC', 'dc','Dc', 'leave', 'LEAVE','Leave','l','L', 'вс','ВС','Вс','дуфму','ДУФМУ','Дуфму'])
+    aliases=['DISCONNECT', 'DC', 'dc','Dc', 'leave', 'LEAVE','Leave','l','L', 'вс','ВС','Вс','дуфму','ДУФМУ','Дуфму'])
 async def disconnect(ctx,fromTimeout=False):
     if ctx.voice_client:
         songs_queue.clear(ctx.guild.id, False)
@@ -552,18 +559,21 @@ async def queue(ctx,page=0):
             if page==0:
                 for i in range(fq_pages):
                     if "\t\t — текущий" in songs_queue.get_qfp(serverid)[i]:
-                        await ctx.message.reply(f"{songs_queue.get_qfp(serverid)[i]}\n\nСтраница {i+1} из {fq_pages}. (прим. `-queue 2`)")
+                        await ctx.message.reply(f"{songs_queue.get_qfp(serverid)[i]}\n\nСтраница {i+1}"
+                                                f"из {fq_pages}. (прим. `-queue 2`)")
                         break
                     else:
                         k+=1
                 if k==fq_pages:
-                    await ctx.message.reply(f"{songs_queue.get_qfp(serverid)[page-1]}\nСтраница очереди: {k} из {fq_pages}. (прим. `-queue 2`)")
+                    await ctx.message.reply(f"{songs_queue.get_qfp(serverid)[page-1]}\nСтраница очереди: {k}"
+                                            f"из {fq_pages}. (прим. `-queue 2`)")
             else:
                 if page>fq_pages or page<1:
                     await ctx.message.reply(f'Такой страницы ({page}) не существует!')
                     return
                 else:
-                    await ctx.message.reply(f"{songs_queue.get_qfp(serverid)[page-1]}\nСтраница очереди: {page} из {fq_pages}. (прим. `-queue 2`)")
+                    await ctx.message.reply(f"{songs_queue.get_qfp(serverid)[page-1]}\nСтраница очереди: {page}"
+                                            f"из {fq_pages}. (прим. `-queue 2`)")
             songs_queue.set_qfp(serverid,[])
     else:
         await ctx.message.reply('Очередь пуста!')
@@ -594,9 +604,12 @@ async def jump(ctx, value=-1):
         await ctx.message.reply('Очередь пуста!')
         return
 
-    if value<1:
+    if value<1 :
         await ctx.message.reply('Неверный аргумент! Пример: **`-jump 1`**')
         return
+
+    #value=-1
+    #or type(value)!=int
 
     if value<=songs_queue.queue_len(serverid):
         current_time=datetime.datetime.now().timestamp()
@@ -628,15 +641,16 @@ async def now_playing(ctx):
                 start=songs_queue.get_start_time(serverid)
                 no_play=songs_queue.get_no_play_time(serverid)
                 current_time=datetime.datetime.fromtimestamp(now-(start+no_play),tz=timezone.utc).strftime("%H:%M:%S")
-                c_time_splitted=current_time.split(":")
+                splitted=current_time.split(":")
 
                 time = track_len.split(":")
                 seconds=(int(time[0])*60*60)+(int(time[1])*60)+(int(time[2]))
 
                 track_len_part=ceil(seconds/12)
-                dot_place=(int(c_time_splitted[0])*60*60+int(c_time_splitted[1])*60+int(c_time_splitted[2]))//track_len_part
+                dot_place=(int(splitted[0])*60*60+int(splitted[1])*60+int(splitted[2]))//track_len_part
 
-                #print(f"now: {now}\nstart: {start}\ndiff={now-start}\ner={datetime.datetime.utcfromtimestamp(now-(start+no_play)).strftime('%H:%M:%S')}")
+                #print(f"now: {now}\nstart: {start}\ndiff={now-start}\n"
+                # f"er={datetime.datetime.utcfromtimestamp(now-(start+no_play)).strftime('%H:%M:%S')}")
                 embed = discord.Embed(description=f'**Сейчас играет:**\n[{songs_queue.get_track_name(serverid)}]'
                                         f'({songs_queue.get_yt_link(serverid)})\n\n'
                                         f'{current_time} {"—" * (dot_place) + "⬤" + (11 - dot_place) * "—"} '
