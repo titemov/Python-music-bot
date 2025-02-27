@@ -2,7 +2,6 @@
 
 # About
 Multiserver python-based discord bot for listening YouTube videos. This bot have dynamic music queue and support playlists up to 250 tracks.  
-Everything that yt-dlp can process this bot can too, but it is recommended to use YouTube.
 
 Interface: RU  
 Logging: ENG
