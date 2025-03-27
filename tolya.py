@@ -43,7 +43,7 @@ intents = discord.Intents.all()
 intents.message_content= True
 intents.voice_states = True
 
-bot = commands.Bot(command_prefix='-',intents=intents)
+bot = commands.Bot(command_prefix='!',intents=intents)
 bot.remove_command('help')
 
 
@@ -144,6 +144,7 @@ async def join(ctx):
                     return 1
                 else:
                     await ctx.voice_client.disconnect()
+                    await asyncio.sleep(0.3)
                     await ctx.author.voice.channel.connect(timeout=999999999,reconnect=False,self_deaf=True)
     else:
         await ctx.message.reply('Вы должны находиться в голосовом канале!')
@@ -151,7 +152,6 @@ async def join(ctx):
 
 
 async def add(ctx, url):
-    no_url=False
     if ((" -" in url) or ("-З" in url) or ("-з" in url) or ("-p" in url) or ("-P" in url)):
         #anti "-play -play -play ... " part
         url=url.split(" ")[len(url.split(" "))-1]
@@ -205,9 +205,8 @@ async def add(ctx, url):
 
                 for i in range(playlist_len):
                     try:
-                        #ydl.extract_info(entries[i]['url'], download=False, process=False)
                         name = entries[i]['title']
-                        print(f"playlist: {i} {entries[i]}")
+                        #print(f"playlist: {i} {entries[i]}")
                         src_url=""
                         vid_url=entries[i]['url']
                         pause_time=0
@@ -227,7 +226,7 @@ async def add(ctx, url):
                             songs_queue.queue_add([name, length, start_time, src_url, vid_url, thumbnail_url, author,
                                                    pause_time,no_play_time],ctx.guild.id)
                     except:
-                        print(i)
+                        #print(i)
                         skipped += f"{name}\n"
                         logger.debug(f'Track skipped – {name}.')
 
@@ -247,44 +246,47 @@ async def add(ctx, url):
                 return
             except Exception as e:
                 logger.error(f'Playlist error: {e}')
-                logger.exception(e)
+                #logger.exception(e)
                 await ctx.message.reply("Ошибка воспроизведения плейлиста. Проверьте ссылку.\n"
                                         "Если Вы хотели воспроизвести __один__ трек, то уберите из ссылки всё после"
                                         "\"&list\" включая \"&list\"")
+                return 1
 
     else:
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-            try:
-                info = ydl.extract_info(url, download=False, process=False)
-            except:
-                no_url=True
-                msg = await ctx.channel.send("Ищу...\n"
-                                        "Для лучшего поиска используйте: **`-search`**")
+            haveURL=False
+            if ("youtube.com" or "youtu.be") in url:
+                haveURL=True
+                try:
+                    info = ydl.extract_info(url.split(" ")[0], download=False, process=False)
+                except Exception as e:
+                    await ctx.message.reply("Ошибка! Видео недоступно или имеет возрастные ограничения.")
+                    logger.error(f"Cannot extract info: {e} (Probably unavailable or age restricted)")
+                    return 1
+            else:
+                msg = await ctx.channel.send("Ищу...\nДля лучшего поиска используйте: **`-search`**")
                 try:
                     info = (list(ydl.extract_info(f"ytsearch1:{url}", download=False,process=False)
                                             ['entries'])[0])
                     ydl.extract_info(info['url'], download=False, process=False)
-                    print(info)
+                    #print(info)
                 except Exception as e:
                     await msg_delete(msg)
-                    await ctx.message.reply("Ошибка! Скорее всего видео имеет возрастные ограничения.")
+                    await ctx.message.reply("Ошибка! Видео недоступно или имеет возрастные ограничения.")
                     logger.error(f"Cannot extract info: {e} (Probably unavailable or age restricted)")
                     return 1
             #print(info)
             ###checks
-            try:
-                if info['live_status']=='is_live':
-                    await ctx.message.reply("Ошибка! Невозможно воспроизвести прямую трансляцию.")
-                    logger.error("Live stream called")
-                    if no_url:
-                        await msg_delete(msg)
-                    #raise Exception("Live stream called")
-                    return
-            except:
-                pass
+            if info['live_status']=='is_live':
+                await ctx.message.reply("Ошибка! Невозможно воспроизвести прямую трансляцию.")
+                logger.error("Live stream called")
+                if not haveURL:
+                    await msg_delete(msg)
+                #raise Exception("Live stream called")
+                return 1
             ###
 
-            if no_url:
+            if not haveURL:
                 #info = list(info['entries'])[0]
                 url = info['url']
             else:
@@ -311,13 +313,13 @@ async def add(ctx, url):
                                       colour=discord.Colour.green())
                 embed.set_thumbnail(url=thumbnail_url)
                 logger.info(f"{name} ({url}) requested by {author} in \"{ctx.guild.name}\"")
-            if no_url:
+            if not haveURL:
                 await msg_delete(msg)
 
             await ctx.message.reply(embed=embed)
             return
 
-async def auto_skip(voice_client,ctx,avaliable=True):
+async def auto_skip(ctx,voice_client,avaliable=True):
     # next track after current ended if any left in queue
     serverid=ctx.guild.id
     if songs_queue.if_queue_exist(serverid):
@@ -325,11 +327,11 @@ async def auto_skip(voice_client,ctx,avaliable=True):
         songs_queue.set_start_time(serverid,datetime.datetime.now().timestamp())
         songs_queue.set_no_play_time(serverid,0)
         try:
-            await audio_player(voice_client, ctx)
+            await audio_player(ctx,voice_client)
         except Exception as e:
-            logger.info(f"Queue ended in \"{ctx.guild.name}\", by {e}")
+            logger.error(f"audio_player: {e}")
 
-async def audio_player(voice_client,ctx): #track player
+async def audio_player(ctx,voice_client): #track player
     serverid=ctx.guild.id
     #channelid=ctx.channel.id
     try:
@@ -341,11 +343,16 @@ async def audio_player(voice_client,ctx): #track player
                         songs_queue.set_stream_link(serverid, info['url'])
                     except:
                         logger.info(f"Skipping unavaliable video in \"{ctx.guild.name}\".")
+                        # try:
+                        #     asyncio.create_task(ctx.channel.send(f"Пропущено недоступное видео - "
+                        #                            f"{songs_queue.get_track_name(serverid)}"))
+                        # except Exception as e:
+                        #     print(e)
                         songs_queue.tracks[serverid][1][songs_queue.get_index(serverid)][0]="(UNAVAILABLE) "+\
                                                     songs_queue.tracks[serverid][1][songs_queue.get_index(serverid)][0]
             if songs_queue.get_stream_link(serverid):
                 voice_client.play(discord.FFmpegOpusAudio(source=songs_queue.get_stream_link(serverid),
-                                            **FFMPEG_OPTIONS), after=lambda e: asyncio.run(auto_skip(voice_client,ctx)))
+                                            **FFMPEG_OPTIONS), after=lambda e: asyncio.run(auto_skip(ctx,voice_client)))
                 #disconnect after time module
                 try:
                     songs_queue.tracks[serverid][3] = 0
@@ -370,11 +377,11 @@ async def audio_player(voice_client,ctx): #track player
                     logger.debug(f'Exception raised (timer stopped) in \"{ctx.guild.name}\"')
             else:
                 if (songs_queue.tracks[serverid][0]<songs_queue.queue_len(serverid)):
-                    asyncio.run(auto_skip(voice_client, ctx, False))
+                    asyncio.run(auto_skip(ctx,voice_client, False))
                 else:
-                    raise Exception("Ended")
-    except ClientException or Exception as e: #??????
-        #await disconnect(ctx)
+                    logger.info(f"Queue ended in \"{ctx.guild.name}\"")
+                    return
+    except (ClientException, Exception) as e:
         logger.error(f"client {e}")
         logger.exception(e)
 
@@ -388,10 +395,11 @@ async def play(ctx, *url):
             return
         if await join(ctx)==1:
             return
+        await asyncio.sleep(0.5) #might help against "Not connected to a voice channel"
         if (await add(ctx, ' '.join(url))==1):
             raise Exception("Cannot extract info")
 
-        await audio_player(ctx.voice_client,ctx)
+        await audio_player(ctx,ctx.voice_client)
 
     except Exception as e:
         logger.error(f'Play error: {e}')
@@ -432,20 +440,17 @@ async def search(ctx, *user_request):
         try:
             int(msg)
             if 1<=int(msg)<=5:
-                url='https://youtube.com' + searchResult[int(msg) - 1]['url_suffix']
+                url='https://www.youtube.com/watch?v=' + searchResult[int(msg) - 1]['id']
             else:
                 raise Exception
         except:
             await ctx.message.reply("Некорректный аргумент! Отменяю...")
             return
 
-    if (await add(ctx, ''.join(url)))==1:
-        await ctx.message.reply('"play" ERROR, incorrect url')
-        if ctx.voice_client:
-            await ctx.voice_client.disconnect()
+    if (await add(ctx, url) == 1):
         return
 
-    await audio_player(ctx.voice_client,ctx)
+    await audio_player(ctx,ctx.voice_client)
 
 
 @bot.command(description="loops current playing track",aliases=['LOOP','Loop','дщщз','ДЩЩЗ','Дщщз'])
@@ -590,6 +595,8 @@ async def clear(ctx):
         else:
             songs_queue.clear(serverid, False)
             await ctx.message.reply(f":white_check_mark:")
+    else:
+        await ctx.message.reply('Бот уже выключен!')
 
 
 @bot.command(description='Playing selected track from queue by its number',aliases=['JUMP','огьз','ОГЬЗ','Jump','Огьз'])
@@ -623,7 +630,7 @@ async def jump(ctx, value=-1):
             songs_queue.jump(value - 1, serverid)
             songs_queue.set_start_time(serverid, current_time)
             songs_queue.tracks[serverid][4]=True
-            await audio_player(ctx.guild.voice_client, ctx)
+            await audio_player(ctx,ctx.guild.voice_client)
             await ctx.message.reply(f":white_check_mark:")
         logger.info(f'Jumped to track №{value} in server \"{ctx.guild.name}\" by {ctx.message.author}')
     else:
