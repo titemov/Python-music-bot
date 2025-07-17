@@ -43,7 +43,7 @@ intents = discord.Intents.all()
 intents.message_content= True
 intents.voice_states = True
 
-bot = commands.Bot(command_prefix='-',intents=intents)
+bot = commands.Bot(command_prefix='!',intents=intents)
 bot.remove_command('help')
 
 
@@ -132,22 +132,29 @@ async def msg_delete(msg):
 
 ### MAIN BLOCK ###
 
-@bot.command(aliases=['j', 'J', 'Join', 'JOIN'])
+@bot.command(aliases=['j', 'J', 'Join', 'JOIN', 'о', 'О','ощфшт','Ощшт','ОЩШТ'])
 async def join(ctx):
-    if ctx.message.author.voice:
-        if not ctx.voice_client:
-            await ctx.author.voice.channel.connect(timeout=999999999,reconnect=False,self_deaf=True)
+    try:
+        if ctx.message.author.voice:
+            if not ctx.voice_client:
+                await ctx.author.voice.channel.connect(timeout=3,reconnect=False,self_deaf=True)
+            else:
+                if ctx.message.author.voice.channel.id != ctx.voice_client.channel.id:
+                    if ctx.voice_client.is_playing():
+                        await ctx.message.reply('Бот в другом голосовом канале!')
+                        return 1
+                    else:
+                        await ctx.voice_client.disconnect()
+                        await ctx.author.voice.channel.connect(timeout=3,reconnect=False,self_deaf=True)
         else:
-            if ctx.message.author.voice.channel.id != ctx.voice_client.channel.id:
-                if ctx.voice_client.is_playing():
-                    await ctx.message.reply('Бот в другом голосовом канале!')
-                    return 1
-                else:
-                    await ctx.voice_client.disconnect()
-                    await asyncio.sleep(0.3)
-                    await ctx.author.voice.channel.connect(timeout=999999999,reconnect=False,self_deaf=True)
-    else:
-        await ctx.message.reply('Вы должны находиться в голосовом канале!')
+            await ctx.message.reply('Вы должны находиться в голосовом канале!')
+            return 1
+    except asyncio.TimeoutError as e:
+        await ctx.channel.send(f'Бот не может подключиться. '
+                               f'Попробуйте еще раз.\n'
+                               f'Или смените **сервер** голосового канала'
+                               f'{e}')
+        logger.error(f'Бот не может подключиться. {e}')
         return 1
 
 
@@ -159,15 +166,18 @@ async def add(ctx, url):
     author=ctx.message.author.name
     serverid=ctx.guild.id
 
+    if ("&start_radio" in url) or ("=RDMM" in url) or ("=LL" in url) or ("=LM" in url):
+        # проверка на "Мой джем" и на "Понравившиеся"
+        await ctx.channel.send('Предупреждение:\n'
+                                'Вы прикрепили плейлист, генерируемый на основе предподчтений ВАШЕГО аккаунта.\n'
+                                'Без входа в Ваш аккаунт содержимое получить невозможно.')
+        url = url.split("&list=")[0]
+        # logger.error('Called \"My mix\" or private playlist')
+        # raise Exception('Called \"My mix\" or private playlist')
+        # return
+
     # Плейлисты
     if 'list' in url:
-        if ("&start_radio" in url) or ("=RDMM" in url) or ("=LL" in url) or ("=LM" in url):
-            #проверка на "Мой джем" и на "Понравившиеся"
-            await ctx.message.reply('Ошибка!\n'
-                                    'Вы прикрепили плейлист, генерируемый на основе предподчтений ВАШЕГО аккаунта.\n'
-                                    'Без входа в Ваш аккаунт содержимое получить невозможно.')
-            logger.error('Called \"My mix\" or private playlist')
-            raise Exception('Called \"My mix\" or private playlist')
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
             max_playlist_count = 250
 
@@ -395,15 +405,13 @@ async def play(ctx, *url):
             return
         if await join(ctx)==1:
             return
-        await asyncio.sleep(0.5) #might help against "Not connected to a voice channel"
+        await asyncio.sleep(3.1) #waiting for join func
         if (await add(ctx, ' '.join(url))==1):
-            raise Exception("Cannot extract info")
+            raise Exception("Cannot extract info")        
 
         await audio_player(ctx,ctx.voice_client)
-
     except Exception as e:
         logger.error(f'Play error: {e}')
-        #logger.exception(e)
         return
 
 
