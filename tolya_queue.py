@@ -1,3 +1,5 @@
+from tolya_string import *
+
 class Queue:
     def __init__(self):
         self.trackindex=0
@@ -23,7 +25,7 @@ class Queue:
         # print(serverid)
         if serverid not in self.tracks.keys():
             self.tracks[serverid]=[self.trackindex,[element],self.loop_flag, self.timer, self.isJumpUsed]
-            #element[9]=name, length, start time, stream link, yt link, thumbnail link, author, pause time, no play time
+            #element[len=9]=name, length, start time, stream link, yt link, thumbnail link, author, pause time, no play time
         else:
             self.tracks[serverid][1].append(element)
         #print(self.tracks)
@@ -41,9 +43,11 @@ class Queue:
             current = self.tracks[serverid][1][self.tracks[serverid][0]][0]
             try:
                 if self.tracks[serverid][2] == True:
-                    self.tracks[serverid][1][self.tracks[serverid][0]][0] = f'{self.tracks[serverid][1][self.tracks[serverid][0]][0]} \t\t — текущий (зациклен)'
+                    self.tracks[serverid][1][self.tracks[serverid][0]][0] = \
+                        f'{self.tracks[serverid][1][self.tracks[serverid][0]][0]} \t\t — {QUEUE_CURRENT} ({QUEUE_LOOPED})'
                 else:
-                    self.tracks[serverid][1][self.tracks[serverid][0]][0] = f'{self.tracks[serverid][1][self.tracks[serverid][0]][0]} \t\t — текущий'
+                    self.tracks[serverid][1][self.tracks[serverid][0]][0] = \
+                        f'{self.tracks[serverid][1][self.tracks[serverid][0]][0]} \t\t — {QUEUE_CURRENT}'
 
                 length=len(self.tracks[serverid][1])
                 pages = (length // 20) + 1

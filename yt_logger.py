@@ -29,11 +29,11 @@ class MyLogger:
         logger1.info(f"YOUTUBE-DLP: {msg}")
 
     def warning(self, msg):
-        if not ('Some formats' or 'Falling back') in msg:
-            logger1.warning(f"YOUTUBE-DLP: {msg}")
+        #if not ('Some formats' or 'Falling back') in msg:
+        logger1.warning(f"YOUTUBE-DLP: {msg}")
 
     def error(self, msg):
-        if 'is not a valid URL. Set --default-search "ytsearch"' and 'to search YouTube' in msg:
-            pass
-        else:
-            logger1.error(f"YOUTUBE-DLP: {msg}")
+        # if 'is not a valid URL. Set --default-search "ytsearch"' and 'to search YouTube' in msg:
+        #     pass
+        # else:
+        logger1.error(f"YOUTUBE-DLP: {msg}")
